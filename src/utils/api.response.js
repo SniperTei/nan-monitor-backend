@@ -20,7 +20,7 @@ class APIResponse {
     return this.error('E00001', msg, 400);
   }
 
-  static userExists(msg = '用户已存在') {
+  static userExists(msg = '用户名已存在') {
     return this.error('E00002', msg, 400);
   }
 

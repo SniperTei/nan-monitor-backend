@@ -1,6 +1,8 @@
 const User = require('../models/user.model');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const BusinessError = require('../errors/BusinessError');
+const ErrorCodes = require('../constants/errorCodes');
 
 class UserService {
   async register(userData) {
@@ -9,18 +11,18 @@ class UserService {
     // 检查用户名是否已存在
     const existingUsername = await User.findOne({ username });
     if (existingUsername) {
-      throw new Error('用户名已存在');
+      throw new BusinessError(ErrorCodes.USER_EXISTS, '用户名已存在');
     }
 
     // 如果提供了邮箱，检查邮箱是否已存在
     if (email) {
       const existingEmail = await User.findOne({ email });
       if (existingEmail) {
-        throw new Error('邮箱已存在');
+        throw new BusinessError(ErrorCodes.EMAIL_EXISTS, '邮箱已存在');
       }
     }
 
-    // 创建新用户，密码会通过中间件自动加密
+    // 创建新用户
     const user = new User({
       username,
       email,
@@ -46,32 +48,20 @@ class UserService {
     try {
       // 查找用户
       const user = await User.findOne({ username });
-      console.log('查找到的用户:', {
-        username: user?.username,
-        hashedPassword: user?.password,
-        inputPassword: password
-      });
-
       if (!user) {
-        throw new Error('用户名或密码错误');
+        throw new BusinessError(ErrorCodes.INVALID_CREDENTIALS, '用户名或密码错误');
       }
 
       // 使用模型的方法比较密码
-      const isMatch = await user.comparePassword(password);
-      console.log('密码比对结果:', {
-        isMatch,
-        inputPassword: password,
-        storedHash: user.password
-      });
-
+      const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-        throw new Error('用户名或密码错误');
+        throw new BusinessError(ErrorCodes.INVALID_CREDENTIALS, '用户名或密码错误');
       }
 
       // 生成 token
       const token = jwt.sign(
         { userId: user._id },
-        process.env.JWT_SECRET || 'your-secret-key', // 添加默认值，避免环境变量未设置
+        process.env.JWT_SECRET || 'your-secret-key',
         { expiresIn: '24h' }
       );
 
@@ -85,8 +75,11 @@ class UserService {
         }
       };
     } catch (error) {
-      console.error('登录错误:', error);
-      throw new Error('用户名或密码错误');
+      // 如果是业务错误直接抛出，否则包装为业务错误
+      if (error instanceof BusinessError) {
+        throw error;
+      }
+      throw new BusinessError(ErrorCodes.INVALID_CREDENTIALS, '用户名或密码错误');
     }
   }
 

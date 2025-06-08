@@ -1,5 +1,6 @@
 const userService = require('../services/user.service');
 const APIResponse = require('../utils/api.response');
+const BusinessError = require('../errors/BusinessError');
 
 class UserController {
   async register(req, res) {
@@ -27,12 +28,16 @@ class UserController {
       }
 
       const user = await userService.register(req.body);
-      return res.json(APIResponse.success({ userId: user._id }, '注册成功'));
+      return res.json(APIResponse.success({
+        userId: user._id,
+        username: user.username
+      }, '注册成功'));
     } catch (error) {
-      if (error.message === '用户名或邮箱已存在') {
-        return res.json(APIResponse.userExists());
+      if (error instanceof BusinessError) {
+        return res.json(APIResponse.error(error.code, error.message));
+      } else {
+        return res.json(APIResponse.serverError());
       }
-      return res.json(APIResponse.serverError());
     }
   }
 

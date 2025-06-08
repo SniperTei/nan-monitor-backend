@@ -36,17 +36,24 @@ app.use('/api/v1/logs', logRoutes);
 // 错误处理中间件
 app.use(errorHandler);
 
-// 连接MongoDB
-mongoose.connect('mongodb://localhost:27017/app-monitor-backend', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => {
-  console.log('Connected to MongoDB');
-}).catch((err) => {
-  console.error('MongoDB connection error:', err);
-});
+// 只在非测试环境连接数据库
+if (process.env.NODE_ENV !== 'test') {
+  mongoose.connect('mongodb://localhost:27017/app-monitor-backend', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  }).then(() => {
+    console.log('Connected to MongoDB');
+  }).catch((err) => {
+    console.error('MongoDB connection error:', err);
+  });
+}
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-}); 
+// 只在非测试环境启动服务器
+if (process.env.NODE_ENV !== 'test') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
+
+module.exports = app; // 导出 app 以供测试使用 
