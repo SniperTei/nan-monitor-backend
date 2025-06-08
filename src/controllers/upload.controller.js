@@ -1,50 +1,35 @@
 const uploadService = require('../services/upload.service');
-const ResponseUtil = require('../utils/response.util');
+const APIResponse = require('../utils/api.response');
 
 class UploadController {
-  async uploadFiles(req, res) {
+  async uploadFile(req, res) {
     try {
-      if (!req.files || req.files.length === 0) {
-        return res.json(ResponseUtil.error(
-          'A00001',
-          '请选择要上传的文件',
-          400
-        ));
+      if (!req.file) {
+        return res.json(APIResponse.error('E00400', '请选择要上传的文件'));
       }
 
-      if (req.files.length > 9) {
-        return res.json(ResponseUtil.error(
-          'A00001',
-          '最多只能上传9个文件',
-          400
-        ));
-      }
-
-      const results = [];
-      for (const file of req.files) {
-        await uploadService.validateFile(file);
-        
-        // 检查是否是日志文件上传
-        const isLog = req.body.fileType === 'log';
-        const fileInfo = await uploadService.saveFile(file, {
-          isLog,
-          deviceId: req.body.deviceId,
-          logType: req.body.logType,
-          content: req.body.content,
-          metadata: req.body.metadata ? JSON.parse(req.body.metadata) : {},
-          userId: req.userId
-        });
-        
-        results.push(fileInfo);
-      }
-
-      res.json(ResponseUtil.success(results, '文件上传成功'));
+      const result = await uploadService.uploadFile(req.file, 'image');
+      return res.json(APIResponse.success(result, '上传成功'));
     } catch (error) {
-      res.json(ResponseUtil.error(
-        'A00001',
-        error.message,
-        400
-      ));
+      if (error.message === '不支持的文件类型') {
+        return res.json(APIResponse.error('E00400', '不支持的文件类型'));
+      }
+      if (error.message === '文件大小超过限制') {
+        return res.json(APIResponse.error('E00400', '文件大小超过限制'));
+      }
+      return res.json(APIResponse.serverError());
+    }
+  }
+
+  async deleteFile(req, res) {
+    try {
+      await uploadService.deleteFile(req.params.filename);
+      return res.json(APIResponse.success(null, '删除成功'));
+    } catch (error) {
+      if (error.message === '文件不存在') {
+        return res.json(APIResponse.error('E00404', '文件不存在'));
+      }
+      return res.json(APIResponse.serverError());
     }
   }
 }

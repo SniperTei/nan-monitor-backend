@@ -6,7 +6,7 @@ const Log = require('../models/log.model');
 
 class UploadService {
   constructor() {
-    this.uploadDir = path.join(process.cwd(), config.uploadDir);
+    this.uploadDir = config.uploadDir;
     this.ensureUploadDir();
   }
 
@@ -87,6 +87,49 @@ class UploadService {
 
     if (file.size > config.maxFileSize) {
       throw new Error(`文件大小不能超过${config.maxFileSize / 1024 / 1024}MB`);
+    }
+  }
+
+  async uploadFile(file, category) {
+    // 验证文件类别
+    if (!config.allowedTypes[category]) {
+      throw new Error('无效的文件类别');
+    }
+
+    // 验证文件类型
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!config.allowedTypes[category].includes(ext)) {
+      throw new Error('不支持的文件类型');
+    }
+
+    // 验证文件大小
+    if (file.size > config.maxFileSize) {
+      throw new Error('文件大小超过限制');
+    }
+
+    // 生成新的文件名
+    const filename = Date.now() + '-' + Math.round(Math.random() * 1E9) + ext;
+    const filepath = path.join(this.uploadDir, filename);
+
+    // 移动文件
+    await fs.rename(file.path, filepath);
+
+    return {
+      filename,
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      url: `/uploads/${filename}`
+    };
+  }
+
+  async deleteFile(filename) {
+    const filepath = path.join(this.uploadDir, filename);
+    try {
+      await fs.access(filepath);
+      await fs.unlink(filepath);
+    } catch (error) {
+      throw new Error('文件不存在');
     }
   }
 }

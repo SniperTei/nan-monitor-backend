@@ -31,5 +31,7 @@ module.exports = {
     audio: ['.mp3', '.wav', '.ogg'],  // 音频格式
     video: ['.mp4', '.webm', '.avi'],  // 视频格式
     document: ['.pdf', '.doc', '.docx']  // 文档格式
-  }
+  },
+
+  baseUrl: 'http://localhost:3001',  // 添加基础URL
 }; 
