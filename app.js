@@ -15,6 +15,8 @@ const app = express();
 // 基础中间件
 app.use(cors());
 app.use(bodyParser.json());
+// 解析 application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // 请求日志中间件
 app.use(requestLogger);
