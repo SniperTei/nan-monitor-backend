@@ -8,6 +8,7 @@ const errorHandler = require('./src/middleware/error.middleware');
 
 const userRoutes = require('./src/routes/user.routes');
 const uploadRoutes = require('./src/routes/upload.routes');
+const logRoutes = require('./src/routes/log.routes');
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // API 路由
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/upload', uploadRoutes);
+app.use('/api/v1/logs', logRoutes);
 
 // 错误处理中间件
 app.use(errorHandler);

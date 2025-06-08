@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const config = require('../config');
 const { v4: uuidv4 } = require('uuid');
+const Log = require('../models/log.model');
 
 class UploadService {
   constructor() {
@@ -26,11 +27,10 @@ class UploadService {
     return 'other';
   }
 
-  async saveFile(file) {
+  async saveFile(file, options = {}) {
     const extension = path.extname(file.originalname);
     const fileType = this.getFileType(extension);
     const fileName = `${uuidv4()}${extension}`;
-    const filePath = path.join(this.uploadDir, fileName);
     
     // 确保文件类型目录存在
     const typeDir = path.join(this.uploadDir, fileType);
@@ -40,8 +40,7 @@ class UploadService {
     const finalPath = path.join(typeDir, fileName);
     await fs.writeFile(finalPath, file.buffer);
 
-    // 返回文件信息
-    return {
+    const fileInfo = {
       url: `${config.baseUrl}/${config.uploadDir}/${fileType}/${fileName}`,
       fileName,
       originalName: file.originalname,
@@ -49,6 +48,33 @@ class UploadService {
       mimeType: file.mimetype,
       type: fileType
     };
+
+    // 如果是日志文件，创建日志记录
+    if (options.isLog) {
+      await this.createLogRecord(fileInfo, options);
+    }
+
+    return fileInfo;
+  }
+
+  async createLogRecord(fileInfo, options) {
+    const {
+      deviceId,
+      metadata = {},
+      userId
+    } = options;
+
+    const log = new Log({
+      deviceId,
+      metadata,
+      fileUrl: fileInfo.url,
+      fileName: fileInfo.originalName,
+      fileSize: fileInfo.size,
+      createdBy: userId
+    });
+
+    await log.save();
+    return log;
   }
 
   async validateFile(file) {

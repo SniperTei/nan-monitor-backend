@@ -23,7 +23,18 @@ class UploadController {
       const results = [];
       for (const file of req.files) {
         await uploadService.validateFile(file);
-        const fileInfo = await uploadService.saveFile(file);
+        
+        // 检查是否是日志文件上传
+        const isLog = req.body.fileType === 'log';
+        const fileInfo = await uploadService.saveFile(file, {
+          isLog,
+          deviceId: req.body.deviceId,
+          logType: req.body.logType,
+          content: req.body.content,
+          metadata: req.body.metadata ? JSON.parse(req.body.metadata) : {},
+          userId: req.userId
+        });
+        
         results.push(fileInfo);
       }
 
