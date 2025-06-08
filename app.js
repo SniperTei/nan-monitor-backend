@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -5,6 +6,9 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const requestLogger = require('./src/middleware/logger.middleware');
 const errorHandler = require('./src/middleware/error.middleware');
+
+// 设置 mongoose strictQuery 选项
+mongoose.set('strictQuery', false); // 或者设置为 true，取决于你的需求
 
 const userRoutes = require('./src/routes/user.routes');
 const uploadRoutes = require('./src/routes/upload.routes');
