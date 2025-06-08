@@ -56,10 +56,13 @@ const userSchema = new mongoose.Schema({
   timestamps: true // 这会自动管理 updatedAt 字段
 });
 
-// 密码加密中间件
+// 在保存前加密密码
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
+  // 只有在密码被修改时才重新加密
+  if (!this.isModified('password')) {
+    return next();
+  }
+
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -85,7 +88,7 @@ userSchema.pre('save', function(next) {
   }
 });
 
-// 验证密码的方法
+// 添加密码比较方法
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };

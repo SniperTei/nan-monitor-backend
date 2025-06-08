@@ -1,9 +1,10 @@
 const User = require('../models/user.model');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 class UserService {
   async register(userData) {
-    const { username, email } = userData;
+    const { username, email, password } = userData;
 
     // 检查用户名是否已存在
     const existingUsername = await User.findOne({ username });
@@ -19,10 +20,12 @@ class UserService {
       }
     }
 
-    // 创建新用户
+    // 创建新用户，密码会通过中间件自动加密
     const user = new User({
-      ...userData,
-      // 如果是第一个用户，设置为自己创建
+      username,
+      email,
+      password,
+      isAdmin: false,
       createdBy: null,
       updatedBy: null
     });
@@ -40,37 +43,51 @@ class UserService {
   }
 
   async login(username, password) {
-    // 查找用户
-    const user = await User.findOne({ username });
-    if (!user) {
-      throw new Error('用户名或密码错误');
-    }
+    try {
+      // 查找用户
+      const user = await User.findOne({ username });
+      console.log('查找到的用户:', {
+        username: user?.username,
+        hashedPassword: user?.password,
+        inputPassword: password
+      });
 
-    // 验证密码
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-      throw new Error('用户名或密码错误');
-    }
-
-    // 生成 JWT token
-    const token = jwt.sign(
-      { userId: user._id },
-      'your-secret-key',
-      { expiresIn: '24h' }
-    );
-
-    return {
-      token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        nickname: user.nickname,
-        avatarUrl: user.avatarUrl,
-        isAdmin: user.isAdmin,
-        createdAt: user.createdAt
+      if (!user) {
+        throw new Error('用户名或密码错误');
       }
-    };
+
+      // 使用模型的方法比较密码
+      const isMatch = await user.comparePassword(password);
+      console.log('密码比对结果:', {
+        isMatch,
+        inputPassword: password,
+        storedHash: user.password
+      });
+
+      if (!isMatch) {
+        throw new Error('用户名或密码错误');
+      }
+
+      // 生成 token
+      const token = jwt.sign(
+        { userId: user._id },
+        process.env.JWT_SECRET || 'your-secret-key', // 添加默认值，避免环境变量未设置
+        { expiresIn: '24h' }
+      );
+
+      return {
+        token,
+        user: {
+          id: user._id,
+          username: user.username,
+          email: user.email,
+          isAdmin: user.isAdmin
+        }
+      };
+    } catch (error) {
+      console.error('登录错误:', error);
+      throw new Error('用户名或密码错误');
+    }
   }
 
   async getUserById(userId) {
