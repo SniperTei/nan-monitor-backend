@@ -26,6 +26,7 @@ const upload = multer({
 
 // 上传路由
 router.post('/image', auth, upload.single('file'), uploadController.uploadFile);
+router.post('/archive', auth, upload.single('file'), uploadController.uploadFile);
 router.delete('/:filename', auth, uploadController.deleteFile);
 
 module.exports = router; 

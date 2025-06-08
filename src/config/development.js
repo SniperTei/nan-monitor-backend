@@ -30,6 +30,7 @@ module.exports = {
     image: ['.png', '.jpg', '.jpeg', '.gif', '.webp'],  // 允许的图片格式
     audio: ['.mp3', '.wav', '.ogg'],  // 允许的音频格式
     video: ['.mp4', '.webm', '.avi'],  // 允许的视频格式
-    document: ['.pdf', '.doc', '.docx']  // 允许的文档格式
+    document: ['.pdf', '.doc', '.docx'],  // 允许的文档格式
+    archive: ['.zip', '.rar', '.7z']  // 添加压缩文件类型
   }
 }; 

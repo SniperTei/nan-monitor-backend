@@ -8,7 +8,10 @@ class UploadController {
         return res.json(APIResponse.error('E00400', '请选择要上传的文件'));
       }
 
-      const result = await uploadService.uploadFile(req.file, 'image');
+      // 从请求路径中获取文件类型
+      const fileType = req.path.split('/')[1];  // 获取 'image' 或 'archive' 等
+      const result = await uploadService.uploadFile(req.file, fileType);
+      
       return res.json(APIResponse.success(result, '上传成功'));
     } catch (error) {
       if (error.message === '不支持的文件类型') {

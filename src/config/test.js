@@ -30,7 +30,8 @@ module.exports = {
     image: ['.png', '.jpg', '.jpeg', '.gif', '.webp'],  // 图片格式
     audio: ['.mp3', '.wav', '.ogg'],  // 音频格式
     video: ['.mp4', '.webm', '.avi'],  // 视频格式
-    document: ['.pdf', '.doc', '.docx']  // 文档格式
+    document: ['.pdf', '.doc', '.docx'],  // 文档格式
+    archive: ['.zip', '.rar', '.7z']  // 添加压缩文件类型
   },
 
   baseUrl: 'http://localhost:3001',  // 添加基础URL

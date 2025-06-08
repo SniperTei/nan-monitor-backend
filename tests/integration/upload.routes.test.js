@@ -30,6 +30,7 @@ app.use((err, req, res, next) => {
 
 describe('Upload Routes', () => {
   let testImagePath;
+  let testZipPath;  // 添加压缩文件测试路径
 
   beforeAll(async () => {
     // 确保上传目录存在
@@ -40,11 +41,21 @@ describe('Upload Routes', () => {
     // 创建测试文件
     testImagePath = path.join(config.uploadDir, 'test.jpg');
     await fs.writeFile(testImagePath, 'fake image content');
+
+    // 创建测试压缩文件
+    testZipPath = path.join(config.uploadDir, 'test.zip');
+    await fs.writeFile(testZipPath, 'fake zip content');
   });
 
   afterAll(async () => {
     // 清理上传目录
     await fs.rm(config.uploadDir, { recursive: true, force: true });
+  });
+
+  afterEach(async () => {
+    // 清理测试文件
+    await fs.rm(config.uploadDir, { recursive: true, force: true }).catch(() => {});
+    await fs.mkdir(config.uploadDir, { recursive: true });
   });
 
   describe('POST /api/v1/upload/image', () => {
@@ -134,6 +145,73 @@ describe('Upload Routes', () => {
       expect(res.status).toBe(200);
       expect(res.body.code).toBe('E00404');
       expect(res.body.msg).toBe('文件不存在');
+    });
+  });
+
+  describe('POST /api/v1/upload/archive', () => {
+    it('should upload archive file successfully', async () => {
+      const res = await request(app)
+        .post('/api/v1/upload/archive')
+        .set('Authorization', `Bearer ${testEnv.TEST_TOKEN}`)
+        .attach('file', testZipPath);
+
+      expect(res.status).toBe(200);
+      expect(res.body.code).toBe('000000');
+      expect(res.body.data).toHaveProperty('filename');
+      expect(res.body.data).toHaveProperty('url');
+      expect(res.body.msg).toBe('上传成功');
+
+      // 验证文件是否实际存在
+      const uploadedPath = path.join(config.uploadDir, res.body.data.filename);
+      const exists = await fs.access(uploadedPath)
+        .then(() => true)
+        .catch(() => false);
+      expect(exists).toBe(true);
+    });
+
+    it('should return error when archive file type is not allowed', async () => {
+      // 创建一个不支持的压缩文件类型
+      const testRarPath = path.join(config.uploadDir, 'test.tar');
+      await fs.writeFile(testRarPath, 'fake tar content');
+
+      const res = await request(app)
+        .post('/api/v1/upload/archive')
+        .set('Authorization', `Bearer ${testEnv.TEST_TOKEN}`)
+        .attach('file', testRarPath);
+
+      expect(res.status).toBe(200);
+      expect(res.body.code).toBe('E00400');
+      expect(res.body.msg).toBe('不支持的文件类型');
+
+      await fs.unlink(testRarPath);
+    });
+
+    it('should return error when archive file size exceeds limit', async () => {
+      // 创建一个超过大小限制的压缩文件
+      const largePath = path.join(config.uploadDir, 'large.zip');
+      const largeContent = Buffer.alloc(config.maxFileSize + 1);
+      await fs.writeFile(largePath, largeContent);
+
+      const res = await request(app)
+        .post('/api/v1/upload/archive')
+        .set('Authorization', `Bearer ${testEnv.TEST_TOKEN}`)
+        .attach('file', largePath);
+
+      expect(res.status).toBe(200);
+      expect(res.body.code).toBe('E00400');
+      expect(res.body.msg).toBe('文件大小超过限制');
+
+      await fs.unlink(largePath);
+    });
+
+    it('should return error when no archive file is provided', async () => {
+      const res = await request(app)
+        .post('/api/v1/upload/archive')
+        .set('Authorization', `Bearer ${testEnv.TEST_TOKEN}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.code).toBe('E00400');
+      expect(res.body.msg).toBe('请选择要上传的文件');
     });
   });
 }); 
