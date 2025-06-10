@@ -185,10 +185,11 @@ Authorization: Bearer <token>
 ### 5. 文件上传
 
 **请求方式**
-- POST `/api/v1/upload/image`
-- POST `/api/v1/upload/document`
-- POST `/api/v1/upload/audio`
-- POST `/api/v1/upload/video`
+- POST `/api/v1/upload/image`    // 上传图片
+- POST `/api/v1/upload/document` // 上传文档
+- POST `/api/v1/upload/audio`    // 上传音频
+- POST `/api/v1/upload/video`    // 上传视频
+- POST `/api/v1/upload/archive`  // 上传压缩文件
 
 **请求头**
 ```
