@@ -1,5 +1,5 @@
 const logService = require('../services/log.service');
-const ResponseUtil = require('../utils/response.util');
+const APIResponse = require('../utils/api.response');
 
 class LogController {
   async uploadLog(req, res) {
@@ -23,13 +23,9 @@ class LogController {
   async getLogs(req, res) {
     try {
       const result = await logService.getLogs(req.query);
-      res.json(ResponseUtil.success(result));
+      res.json(APIResponse.success(result));
     } catch (error) {
-      res.json(ResponseUtil.error(
-        ResponseUtil.ErrorCode.PARAM_ERROR,
-        error.message,
-        400
-      ));
+      res.json(APIResponse.error('E00500', error.message));
     }
   }
 

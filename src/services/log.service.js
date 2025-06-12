@@ -32,13 +32,7 @@ class LogService {
     }
     if (date) {
       // 查询指定日期的日志
-      const startDate = new Date(date);
-      const endDate = new Date(date);
-      endDate.setDate(endDate.getDate() + 1);
-      filter.createdAt = {
-        $gte: startDate,
-        $lt: endDate
-      };
+      filter.date = date;
     }
 
     const total = await Log.countDocuments(filter);
@@ -46,7 +40,7 @@ class LogService {
       .sort('-createdAt')
       .skip((page - 1) * limit)
       .limit(limit)
-      .populate('createdBy', 'username nickname');
+      .select('deviceId date fileUrl fileName fileSize metadata createdAt');
 
     return {
       logs,
