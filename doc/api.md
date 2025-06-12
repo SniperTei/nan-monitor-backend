@@ -302,3 +302,16 @@ Authorization: Bearer <token>
   "timestamp": "2023-12-20 14:11:30.123"
 }
 ```
+
+### 2.1 获取日志列表（支持按设备ID和日期筛选）
+
+**接口说明**
+获取上传文件的日志记录，支持按设备ID和日期进行筛选，结果分页返回。
+
+**请求方式**
+- GET `/api/v1/logs`
+
+**请求头**
+```
+Authorization: Bearer <token>
+```
