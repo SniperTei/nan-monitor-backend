@@ -12,12 +12,14 @@ const authMiddleware = (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, 'your-secret-key');
-    req.userId = decoded.userId;
+    req.user = {
+      id: decoded.userId,
+      // ... 其他用户信息
+    };
     next();
   } catch (error) {
-    res.status(401).json({ 
-      message: '无效的认证令牌' 
-    });
+    console.error('认证错误:', error);
+    return res.json(APIResponse.error('E00401', '认证失败'));
   }
 };
 

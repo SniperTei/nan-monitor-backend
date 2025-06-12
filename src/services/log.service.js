@@ -2,56 +2,48 @@ const Log = require('../models/log.model');
 const uploadService = require('./upload.service');
 
 class LogService {
-  async createLog(logData, file, userId) {
-    let fileInfo = null;
-    if (file) {
-      fileInfo = await uploadService.saveFile(file);
+  async createLog(logData, fileInfo, userId) {
+    try {
+      const log = new Log({
+        deviceId: logData.deviceId,
+        date: logData.date,
+        fileUrl: fileInfo?.url || '',
+        fileName: fileInfo?.originalName || '',
+        fileSize: fileInfo?.size || 0,
+        metadata: logData.metadata || {},
+        createdBy: userId
+      });
+
+      await log.save();
+      return log;
+    } catch (error) {
+      console.error('创建日志记录失败:', error);
+      throw error;
     }
-
-    const log = new Log({
-      ...logData,
-      fileUrl: fileInfo?.url,
-      fileName: fileInfo?.originalName,
-      fileSize: fileInfo?.size,
-      createdBy: userId
-    });
-
-    await log.save();
-    return log;
   }
 
   async getLogs(query) {
-    const {
-      deviceId,
-      type,
-      startTime,
-      endTime,
-      page = 1,
-      limit = 10,
-      sort = '-timestamp'
-    } = query;
+    const { deviceId, date, page = 1, limit = 10 } = query;
 
     const filter = {};
 
     if (deviceId) {
       filter.deviceId = deviceId;
     }
-    if (type) {
-      filter.type = type;
-    }
-    if (startTime || endTime) {
-      filter.timestamp = {};
-      if (startTime) {
-        filter.timestamp.$gte = new Date(startTime);
-      }
-      if (endTime) {
-        filter.timestamp.$lte = new Date(endTime);
-      }
+    if (date) {
+      // 查询指定日期的日志
+      const startDate = new Date(date);
+      const endDate = new Date(date);
+      endDate.setDate(endDate.getDate() + 1);
+      filter.createdAt = {
+        $gte: startDate,
+        $lt: endDate
+      };
     }
 
     const total = await Log.countDocuments(filter);
     const logs = await Log.find(filter)
-      .sort(sort)
+      .sort('-createdAt')
       .skip((page - 1) * limit)
       .limit(limit)
       .populate('createdBy', 'username nickname');

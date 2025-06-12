@@ -6,6 +6,11 @@ const logSchema = new mongoose.Schema({
     required: [true, '设备ID是必需的'],
     index: true
   },
+  date: {
+    type: String,
+    required: [true, '日期是必需的'],
+    index: true
+  },
   fileUrl: {
     type: String,
     required: [true, '文件URL是必需的']
@@ -23,20 +28,16 @@ const logSchema = new mongoose.Schema({
     of: mongoose.Schema.Types.Mixed,
     default: {}
   },
-  timestamp: {
-    type: Date,
-    default: Date.now,
-    index: true
-  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'User',
+    required: true
   }
 }, {
   timestamps: true
 });
 
 // 创建复合索引
-logSchema.index({ deviceId: 1, timestamp: -1 });
+logSchema.index({ deviceId: 1, date: 1 });
 
 module.exports = mongoose.model('Log', logSchema); 

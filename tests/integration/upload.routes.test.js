@@ -4,10 +4,12 @@ const fs = require('fs').promises;
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
+const mongoose = require('mongoose');
 const uploadRoutes = require('../../src/routes/upload.routes');
 const config = require('../../src/config');
 const testEnv = require('../test.env');
 const APIResponse = require('../../src/utils/api.response');
+const Log = require('../../src/models/log.model');
 
 // 创建测试专用的 Express 应用
 const app = express();
@@ -37,9 +39,14 @@ describe('Upload Routes', () => {
   let testImagePath2;
   let testZipPath1;
   let testZipPath2;
+  let testUserId;
 
   beforeAll(async () => {
+    // 连接测试数据库
+    await mongoose.connect(process.env.MONGODB_TEST_URI);
     await fs.mkdir(config.uploadDir, { recursive: true });
+    // 创建测试用户ID
+    testUserId = new mongoose.Types.ObjectId();
   });
 
   beforeEach(async () => {
@@ -55,23 +62,33 @@ describe('Upload Routes', () => {
       fs.writeFile(testZipPath1, 'fake zip content 1'),
       fs.writeFile(testZipPath2, 'fake zip content 2')
     ]);
+
+    // 清理测试数据
+    await Log.deleteMany({});
   });
 
   afterAll(async () => {
+    await mongoose.disconnect();
     await fs.rm(config.uploadDir, { recursive: true, force: true });
   });
 
   afterEach(async () => {
     await fs.rm(config.uploadDir, { recursive: true, force: true });
     await fs.mkdir(config.uploadDir, { recursive: true });
+    await Log.deleteMany({});
   });
 
   describe('单文件上传测试', () => {
     describe('POST /api/v1/upload/single/image', () => {
-      it('应该成功上传单个图片', async () => {
+      it('应该成功上传单个图片并创建日志记录', async () => {
+        const deviceId = 'test-device-001';
+        const date = '2024-03-20';
+
         const res = await request(app)
           .post('/api/v1/upload/single/image')
           .set('Authorization', `Bearer ${testEnv.TEST_TOKEN}`)
+          .field('deviceId', deviceId)
+          .field('date', date)
           .attach('file', testImagePath1);
 
         expect(res.status).toBe(200);
@@ -79,6 +96,45 @@ describe('Upload Routes', () => {
         expect(res.body.data).toHaveProperty('filename');
         expect(res.body.data).toHaveProperty('url');
         expect(res.body.msg).toBe('上传成功');
+
+        // 验证日志记录
+        const log = await Log.findOne({ deviceId });
+        expect(log).toBeTruthy();
+        expect(log.date).toBe(date);
+        expect(log.metadata.get('fileType')).toBe('image');
+        expect(log.metadata.get('uploadType')).toBe('single');
+      });
+
+      it('上传文件时不提供deviceId应该只上传文件不创建日志', async () => {
+        const res = await request(app)
+          .post('/api/v1/upload/single/image')
+          .set('Authorization', `Bearer ${testEnv.TEST_TOKEN}`)
+          .attach('file', testImagePath1);
+
+        expect(res.status).toBe(200);
+        expect(res.body.code).toBe('000000');
+
+        // 验证没有创建日志
+        const logsCount = await Log.countDocuments();
+        expect(logsCount).toBe(0);
+      });
+
+      it('不提供date时应使用当前日期创建日志', async () => {
+        const deviceId = 'test-device-002';
+        const today = new Date().toISOString().split('T')[0];
+
+        const res = await request(app)
+          .post('/api/v1/upload/single/image')
+          .set('Authorization', `Bearer ${testEnv.TEST_TOKEN}`)
+          .field('deviceId', deviceId)
+          .attach('file', testImagePath1);
+
+        expect(res.status).toBe(200);
+        expect(res.body.code).toBe('000000');
+
+        // 验证日志使用了当前日期
+        const log = await Log.findOne({ deviceId });
+        expect(log.date).toBe(today);
       });
 
       it('未提供文件时应返回错误', async () => {
@@ -126,20 +182,47 @@ describe('Upload Routes', () => {
 
   describe('多文件上传测试', () => {
     describe('POST /api/v1/upload/multiple/image', () => {
-      it('应该成功上传多个图片', async () => {
+      it('应该成功上传多个图片并为每个文件创建日志记录', async () => {
+        const deviceId = 'test-device-003';
+        const date = '2024-03-20';
+
         const res = await request(app)
           .post('/api/v1/upload/multiple/image')
           .set('Authorization', `Bearer ${testEnv.TEST_TOKEN}`)
-          .attach('files', testImagePath1)
-          .attach('files', testImagePath2);
+          .field('deviceId', deviceId)
+          .field('date', date)
+          .attach('fileList', testImagePath1)
+          .attach('fileList', testImagePath2);
 
         expect(res.status).toBe(200);
         expect(res.body.code).toBe('000000');
         expect(Array.isArray(res.body.data)).toBe(true);
         expect(res.body.data.length).toBe(2);
-        expect(res.body.data[0]).toHaveProperty('filename');
-        expect(res.body.data[1]).toHaveProperty('filename');
-        expect(res.body.msg).toBe('上传成功');
+
+        // 验证为每个文件创建了日志记录
+        const logs = await Log.find({ deviceId });
+        expect(logs.length).toBe(2);
+        logs.forEach(log => {
+          expect(log.date).toBe(date);
+          expect(log.metadata.get('fileType')).toBe('image');
+          expect(log.metadata.get('uploadType')).toBe('multiple');
+        });
+      });
+
+      it('上传多个文件时不提供deviceId应该只上传文件不创建日志', async () => {
+        const res = await request(app)
+          .post('/api/v1/upload/multiple/image')
+          .set('Authorization', `Bearer ${testEnv.TEST_TOKEN}`)
+          .attach('fileList', testImagePath1)
+          .attach('fileList', testImagePath2);
+
+        expect(res.status).toBe(200);
+        expect(res.body.code).toBe('000000');
+        expect(res.body.data.length).toBe(2);
+
+        // 验证没有创建日志
+        const logsCount = await Log.countDocuments();
+        expect(logsCount).toBe(0);
       });
 
       it('超出文件数量限制时应返回错误', async () => {
@@ -195,6 +278,33 @@ describe('Upload Routes', () => {
         expect(res.body.data.length).toBe(2);
         expect(res.body.msg).toBe('上传成功');
       });
+    });
+  });
+
+  describe('日志相关测试', () => {
+    it('应该能按设备ID和日期查询到上传记录', async () => {
+      const deviceId = 'test-device-004';
+      const date = '2024-03-20';
+
+      // 先上传文件创建日志
+      await request(app)
+        .post('/api/v1/upload/single/image')
+        .set('Authorization', `Bearer ${testEnv.TEST_TOKEN}`)
+        .field('deviceId', deviceId)
+        .field('date', date)
+        .attach('file', testImagePath1);
+
+      // 查询日志
+      const res = await request(app)
+        .get('/api/v1/logs')
+        .set('Authorization', `Bearer ${testEnv.TEST_TOKEN}`)
+        .query({ deviceId, date });
+
+      expect(res.status).toBe(200);
+      expect(res.body.code).toBe('000000');
+      expect(res.body.data.logs.length).toBe(1);
+      expect(res.body.data.logs[0].deviceId).toBe(deviceId);
+      expect(res.body.data.logs[0].date).toBe(date);
     });
   });
 
