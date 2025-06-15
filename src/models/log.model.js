@@ -6,6 +6,11 @@ const logSchema = new mongoose.Schema({
     required: [true, '设备ID是必需的'],
     index: true
   },
+  projectName: {
+    type: String,
+    required: [true, '项目名是必需的'],
+    index: true
+  },
   date: {
     type: String,
     required: [true, '日期是必需的'],
@@ -39,5 +44,6 @@ const logSchema = new mongoose.Schema({
 
 // 创建复合索引
 logSchema.index({ deviceId: 1, date: 1 });
+logSchema.index({ projectName: 1, date: 1 });
 
 module.exports = mongoose.model('Log', logSchema); 

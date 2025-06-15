@@ -6,6 +6,7 @@ class LogService {
     try {
       const log = new Log({
         deviceId: logData.deviceId,
+        projectName: logData.projectName,
         date: logData.date,
         fileUrl: fileInfo?.url || '',
         fileName: fileInfo?.originalName || '',
@@ -23,12 +24,15 @@ class LogService {
   }
 
   async getLogs(query) {
-    const { deviceId, date, page = 1, limit = 10 } = query;
+    const { deviceId, projectName, date, page = 1, limit = 10 } = query;
 
     const filter = {};
 
     if (deviceId) {
       filter.deviceId = deviceId;
+    }
+    if (projectName) {
+      filter.projectName = projectName;
     }
     if (date) {
       // 查询指定日期的日志
@@ -40,7 +44,7 @@ class LogService {
       .sort('-createdAt')
       .skip((page - 1) * limit)
       .limit(limit)
-      .select('deviceId date fileUrl fileName fileSize metadata createdAt');
+      .select('deviceId projectName date fileUrl fileName fileSize metadata createdAt');
 
     return {
       logs,

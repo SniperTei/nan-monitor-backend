@@ -9,7 +9,7 @@ class UploadController {
         return res.json(APIResponse.error('E00400', '请选择要上传的文件'));
       }
 
-      const { deviceId, date, fileType } = req.body;
+      const { deviceId, projectName, date, fileType } = req.body;
       const uploadType = req.path.split('/')[2]; // 获取 'image' 或 'archive'
       
       // 上传文件
@@ -20,6 +20,7 @@ class UploadController {
         try {
           await logService.createLog({
             deviceId,
+            projectName,
             date: date || new Date().toISOString().split('T')[0],
             metadata: {
               fileType: fileType || uploadType,
@@ -55,7 +56,7 @@ class UploadController {
         return res.json(APIResponse.error('E00400', '请选择要上传的文件'));
       }
 
-      const { deviceId, date } = req.body;
+      const { deviceId, projectName, date } = req.body;
       const fileType = req.path.split('/')[2];
       
       // 上传多个文件
@@ -69,6 +70,7 @@ class UploadController {
           req.files.map(file => 
             logService.createLog({
               deviceId,
+              projectName,
               date: date || new Date().toISOString().split('T')[0],
               metadata: {
                 fileType,
